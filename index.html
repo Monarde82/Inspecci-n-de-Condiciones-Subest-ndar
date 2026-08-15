@@ -1,1 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspección de Condiciones Subestándar - SST</title>
 
+<!-- PWA: instalación en celular y PC -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0052a3">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SST Inspección">
+
+<style>
+  :root {
+    --primary: #0052a3;
+    --primary-dark: #003d7a;
+    --primary-light: #eaf3fc;
+    --success: #28a745;
+    --success-hover: #218838;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --dark: #2c3e50;
+    --border: #dcdfe6;
+    --card-bg: #ffffff;
+    --body-bg: #f0f3f8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--body-bg);
+    margin: 0;
+    padding: 20px 10px;
+    color: #333;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .header {
+    text-align: center;
+    border-bottom: 3px solid var(--primary);
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+  }
+  .header h1 {
+    margin: 0;
+    color: var(--primary);
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .header p {
+    margin: 5px 0 0;
+    color: #666;
+    font-weight: 600;
+  }
+  .codigo-box {
+    background: var(--primary-light);
+    border-left: 6px solid var(--primary);
+    padding: 12px 18px;
+    border-radius: 4px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .codigo-title {
+    font-weight: bold;
+    color: var(--primary-dark);
+    font-size: 15px;
+  }
+  .codigo-val {
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    color: #0b396b;
+    background: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px dashed var(--primary);
+  }
+  .section {
+    margin-bottom: 25px;
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .section h2 {
+    background: var(--primary);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 15px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-group {
+    margin-bottom: 15px;
+  }
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #444;
+  }
+  label .req {
+    color: var(--danger);
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    background: #fff;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,82,163,0.15);
+  }
+  textarea {
+    height: 100px;
+    resize: vertical;
+  }
+  .row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  .row:last-child {
+    margin-bottom: 0;
+  }
+  .col {
+    flex: 1;
+    min-width: 0;
+  }
+  @media(max-width: 650px) {
+    .row { flex-direction: column; gap: 15px; }
+  }
+
+  /* Subida y Previsualización de 3 Fotos */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 10px;
+  }
+  @media(max-width: 600px) {
+    .photo-grid { grid-template-columns: 1fr; }
+  }
+  .photo-slot {
+    border: 2px dashed #b5c7db;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    background: #ffffff;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+  .photo-slot.has-image {
+    border-style: solid;
+    border-color: #28a745;
+  }
+  .photo-slot img {
+    max-width: 100%;
+    max-height: 130px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+  .photo-slot input[type="file"] {
+    display: none;
+  }
+  .photo-label-btn {
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .photo-label-btn:hover {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-remove-photo {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    display: none;
+  }
+  .photo-slot.has-image .btn-remove-photo {
+    display: block;
+  }
+
+  /* Botones de acción */
+  .actions-container {
+    margin-top: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-end;
+    border-top: 2px solid #eaedf2;
+    padding-top: 20px;
+  }
+  .btn {
+    padding: 12px 22px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover {
+    background: var(--primary-dark);
+  }
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+  .btn-success:hover {
+    background: var(--success-hover);
+  }
+  .btn-secondary {
+    background: #6c757d;
+    color: white;
+  }
+  .btn-secondary:hover {
+    background: #5a6268;
+  }
+
+  /* Modal de Vista Previa */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.55);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-content {
+    background: white;
+    max-width: 750px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+  }
+  .modal-header h3 { margin: 0; color: var(--primary); }
+  .close-modal {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #888;
+  }
+  .email-preview-box {
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 15px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Botón flotante de instalación PWA */
+  #btnInstalarApp {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: 13px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 500;
+    align-items: center;
+    gap: 8px;
+  }
+  #btnInstalarApp:hover {
+    background: var(--success-hover);
+  }
+</style>
+</head>
+<body>
+
+<button id="btnInstalarApp">⬇️ Instalar Aplicación</button>
+
+<div class="container">
+
+  <div class="header">
+    <h1>Inspección de Condiciones Subestándar</h1>
+    <p>Gestión de Seguridad y Salud en el Trabajo (SST)</p>
+  </div>
+
+  <form id="inspectionForm" onsubmit="return false;">
+    <div class="codigo-box">
+      <span class="codigo-title">Código de Hallazgo:</span>
+      <span class="codigo-val" id="codigoDisplay">SST-CS-PLX-A-2026-08-0001</span>
+      <input type="hidden" id="codigoHallazgo" value="SST-CS-PLX-A-2026-08-0001">
+    </div>
+
+    <!-- 1. Datos del Reportante -->
+    <div class="section">
+      <h2>1. Datos del Reportante</h2>
+      <div class="form-group">
+        <label>Nombre del Reportante <span class="req">*</span></label>
+        <input type="text" id="nombreReportante" placeholder="Ej. Juan Pérez González" required>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Cargo <span class="req">*</span></label>
+          <input type="text" id="cargoReportante" placeholder="Ej. Supervisor de Operaciones / Prevencionista" required>
+        </div>
+        <div class="col">
+          <label>Empresa <span class="req">*</span></label>
+          <input type="text" id="empresaReportante" placeholder="Ej. Compañía Minera / Contratista" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Información del Hallazgo -->
+    <div class="section">
+      <h2>2. Información del Hallazgo</h2>
+      <div class="row">
+        <div class="col">
+          <label>Fecha del Hallazgo <span class="req">*</span></label>
+          <input type="date" id="fechaHallazgo" required>
+        </div>
+        <div class="col">
+          <label>Hora del Hallazgo <span class="req">*</span></label>
+          <input type="time" id="horaHallazgo" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Área / Sector <span class="req">*</span></label>
+          <select id="areaSector" required>
+            <option value="">-- Seleccionar Área --</option>
+            <option value="Bodega">Bodega</option>
+            <option value="Oficinas">Oficinas</option>
+            <option value="Planta Química">Planta Química</option>
+            <option value="Batea 5">Batea 5</option>
+            <option value="Taller de Soldadura">Taller de Soldadura</option>
+            <option value="Taller Mecánico">Taller Mecánico</option>
+            <option value="Casino">Casino</option>
+            <option value="Interior Mina">Interior Mina</option>
+            <option value="Batea Triple 8">Batea Triple 8</option>
+            <option value="Camarines">Camarines</option>
+            <option value="Baños">Baños</option>
+            <option value="Pilas de Lixiviación">Pilas de Lixiviación</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Ubicación Exacta / Referencia <span class="req">*</span></label>
+          <input type="text" id="ubicacionExacta" placeholder="Ej. Pasillo central sector bombas #4" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción Detallada de la Condición Subestándar <span class="req">*</span></label>
+        <textarea id="descripcionHallazgo" placeholder="Describa la condición insegura observada, desviación de estándar, elementos afectados, etc." required></textarea>
+      </div>
+
+      <!-- CAPACIDAD PARA 3 FOTOGRAFÍAS -->
+      <div class="form-group">
+        <label>Registro Fotográfico (Hasta 3 Fotografías del Hallazgo):</label>
+        <div class="photo-grid">
+          
+          <!-- Foto 1 -->
+          <div class="photo-slot" id="slot-1">
+            <button type="button" class="btn-remove-photo" onclick="removePhoto(1)" title="Eliminar foto">&times;</button>
+            <img id="img-preview-1" style="display:none;" alt="Foto 1">
+            <span id="placeholder-1" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 1: Vista General</span>
+            <label class="photo-label-btn" for="foto1">Seleccionar Foto 1</label>
+            <input type="file" id="foto1" accept="image/*" onchange="previewImage(event, 1)">
+          </div>
+
+          <!-- Foto 2 -->
+          <div class="photo-slot" id="slot-2">
+            <button type="button" class="btn-remove-photo" onclick="removePhoto(2)" title="Eliminar foto">&times;</button>
+            <img id="img-preview-2" style="display:none;" alt="Foto 2">
+            <span id="placeholder-2" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 2: Detalle / Acercamiento</span>
+            <label class="photo-label-btn" for="foto2">Seleccionar Foto 2</label>
+            <input type="file" id="foto2" accept="image/*" onchange="previewImage(event, 2)">
+          </div>
+
+          <!-- Foto 3 -->
+          <div class="photo-slot" id="slot-3">
+            <button type="button" class="btn-remove-photo" onclick="removePhoto(3)" title="Eliminar foto">&times;</button>
+            <img id="img-preview-3" style="display:none;" alt="Foto 3">
+            <span id="placeholder-3" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 3: Entorno / Medida Inmediata</span>
+            <label class="photo-label-btn" for="foto3">Seleccionar Foto 3</label>
+            <input type="file" id="foto3" accept="image/*" onchange="previewImage(event, 3)">
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Clasificación del Riesgo y Medidas -->
+    <div class="section">
+      <h2>3. Clasificación del Riesgo y Control</h2>
+      <div class="row">
+        <div class="col">
+          <label>Tipo de Peligro / Riesgo <span class="req">*</span></label>
+          <select id="tipoRiesgo" required>
+            <option value="">-- Seleccionar Tipo --</option>
+            <option value="Seguridad / Mecánico">Seguridad / Mecánico</option>
+            <option value="Químico (Sustancias Peligrosas)">Químico (Sustancias Peligrosas)</option>
+            <option value="Eléctrico">Eléctrico</option>
+            <option value="Biológico">Biológico</option>
+            <option value="Físico (Ruido, Vibración, Temperatura)">Físico (Ruido, Vibración, Temperatura)</option>
+            <option value="Locativo / Caídas a mismo/distinto nivel">Locativo / Caídas a mismo/distinto nivel</option>
+            <option value="Ergonómico / Manejo Manual de Cargas">Ergonómico / Manejo Manual de Cargas</option>
+            <option value="Incendio / Emergencia">Incendio / Emergencia</option>
+            <option value="Ambiental">Ambiental</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Potencial de Severidad <span class="req">*</span></label>
+          <select id="potencialSeveridad" required>
+            <option value="Bajo (Leve)">Bajo (Leve)</option>
+            <option value="Medio (Moderado)">Medio (Moderado)</option>
+            <option value="Alto (Grave / Crítico)" selected>Alto (Grave / Crítico)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Acción Correctiva Inmediata / Propuesta</label>
+        <textarea id="accionCorrectiva" placeholder="Acción adoptada en el momento o recomendación para su mitigación definitiva."></textarea>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Responsable de la Corrección</label>
+          <input type="text" id="responsableAccion" placeholder="Ej. Jefe de Área / Supervisor de Mantenimiento">
+        </div>
+        <div class="col">
+          <label>Plazo Estimado de Cierre</label>
+          <input type="date" id="plazoCierre">
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Destinatarios del Correo -->
+    <div class="section">
+      <h2>4. Configuración de Envío por Correo Electrónico</h2>
+      <div class="form-group">
+        <label>Destinatario Principal (Email) <span class="req">*</span></label>
+        <input type="email" id="emailDestino" placeholder="seguridad@empresa.cl, prevencion@empresa.cl" required>
+      </div>
+      <div class="form-group">
+        <label>Con Copia (CC)</label>
+        <input type="text" id="emailCC" placeholder="jefe.area@empresa.cl, administrador@empresa.cl">
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="actions-container">
+      <button type="button" class="btn btn-secondary" onclick="generarNuevoCodigo()">🔄 Generar Nuevo Código</button>
+      <button type="button" class="btn btn-primary" onclick="mostrarModalPrevia()">👁️ Vista Previa del Reporte</button>
+      <button type="button" class="btn btn-success" onclick="enviarCorreoElectronico()">📧 Generar y Enviar Correo</button>
+    </div>
+  </form>
+</div>
+
+<!-- MODAL DE VISTA PREVIA -->
+<div class="modal-overlay" id="modalPreview">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Resumen del Hallazgo para Notificación</h3>
+      <button class="close-modal" onclick="cerrarModal()">&times;</button>
+    </div>
+    <p style="font-size:13px; color:#555;">Este es el formato estructurado del hallazgo que se remitirá a través de correo electrónico:</p>
+    <div class="email-preview-box" id="previewContent"></div>
+    <div style="margin-top:15px; text-align:right;">
+      <button class="btn btn-secondary" onclick="cerrarModal()">Cerrar</button>
+      <button class="btn btn-success" onclick="cerrarModal(); enviarCorreoElectronico();">Confirmar y Abrir en Cliente de Correo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Inicialización de Fecha y Hora actual
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('fechaHallazgo').value = `${yyyy}-${mm}-${dd}`;
+    
+    const hh = String(today.getHours()).padStart(2, '0');
+    const min = String(today.getMinutes()).padStart(2, '0');
+    document.getElementById('horaHallazgo').value = `${hh}:${min}`;
+  });
+
+  // Generador de código aleatorio correlativo
+  function generarNuevoCodigo() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const corr = Math.floor(1000 + Math.random() * 9000);
+    const cod = `SST-CS-PLX-A-${yyyy}-${mm}-${corr}`;
+    document.getElementById('codigoDisplay').innerText = cod;
+    document.getElementById('codigoHallazgo').value = cod;
+  }
+
+  // Almacenamiento local de fotos en Base64
+  const photoData = { 1: null, 2: null, 3: null };
+
+  function previewImage(event, slot) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        photoData[slot] = e.target.result;
+        const img = document.getElementById(`img-preview-${slot}`);
+        img.src = e.target.result;
+        img.style.display = 'block';
+        document.getElementById(`placeholder-${slot}`).style.display = 'none';
+        document.getElementById(`slot-${slot}`).classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removePhoto(slot) {
+    photoData[slot] = null;
+    document.getElementById(`foto${slot}`).value = '';
+    const img = document.getElementById(`img-preview-${slot}`);
+    img.src = '';
+    img.style.display = 'none';
+    document.getElementById(`placeholder-${slot}`).style.display = 'block';
+    document.getElementById(`slot-${slot}`).classList.remove('has-image');
+  }
+
+  function construirCuerpoReporte() {
+    const cod = document.getElementById('codigoHallazgo').value;
+    const reportante = document.getElementById('nombreReportante').value || 'No indicado';
+    const cargo = document.getElementById('cargoReportante').value || 'No indicado';
+    const empresa = document.getElementById('empresaReportante').value || 'No indicado';
+    
+    const fecha = document.getElementById('fechaHallazgo').value || 'No indicado';
+    const hora = document.getElementById('horaHallazgo').value || 'No indicado';
+    const area = document.getElementById('areaSector').value || 'No indicado';
+    const ubicacion = document.getElementById('ubicacionExacta').value || 'No indicado';
+    const descripcion = document.getElementById('descripcionHallazgo').value || 'Sin detalle';
+    
+    const riesgo = document.getElementById('tipoRiesgo').value || 'No clasificado';
+    const severidad = document.getElementById('potencialSeveridad').value || 'No especificado';
+    const accion = document.getElementById('accionCorrectiva').value || 'Pendiente de definición';
+    const responsable = document.getElementById('responsableAccion').value || 'No asignado';
+    const plazo = document.getElementById('plazoCierre').value || 'Inmediato / Por coordinar';
+
+    let conteoFotos = 0;
+    if (photoData[1]) conteoFotos++;
+    if (photoData[2]) conteoFotos++;
+    if (photoData[3]) conteoFotos++;
+
+    return `=====================================================
+REPORTE DE INSPECCIÓN: CONDICIÓN SUBESTÁNDAR
+SISTEMA DE GESTIÓN DE SEGURIDAD Y SALUD EN EL TRABAJO
+=====================================================
+Código de Registro: ${cod}
+Fecha/Hora Reporte: ${fecha} ${hora}
+
+1. DATOS DEL REPORTANTE:
+-----------------------------------------------------
+• Nombre: ${reportante}
+• Cargo: ${cargo}
+• Empresa: ${empresa}
+
+2. DETALLE DEL HALLAZGO:
+-----------------------------------------------------
+• Área / Sector: ${area}
+• Ubicación Específica: ${ubicacion}
+• Descripción de la Condición Insegura:
+  ${descripcion}
+
+3. EVALUACIÓN Y MEDIDAS DE CONTROL:
+-----------------------------------------------------
+• Tipo de Peligro / Riesgo: ${riesgo}
+• Potencial de Severidad: ${severidad}
+• Medida Correctiva / Mitigación:
+  ${accion}
+• Responsable Designado: ${responsable}
+• Plazo Estimado de Solución: ${plazo}
+
+4. REGISTRO FOTOGRÁFICO:
+-----------------------------------------------------
+• Fotografías adjuntas al reporte: ${conteoFotos} de 3 cargadas en la aplicación.
+*(Nota: Adjunte las imágenes descargadas/capturadas si su cliente de correo lo requiere).*
+=====================================================`;
+  }
+
+  function mostrarModalPrevia() {
+    const cuerpo = construirCuerpoReporte();
+    document.getElementById('previewContent').innerText = cuerpo;
+    document.getElementById('modalPreview').classList.add('active');
+  }
+
+  function cerrarModal() {
+    document.getElementById('modalPreview').classList.remove('active');
+  }
+
+  function enviarCorreoElectronico() {
+    const destino = document.getElementById('emailDestino').value;
+    const cc = document.getElementById('emailCC').value;
+    const cod = document.getElementById('codigoHallazgo').value;
+    const area = document.getElementById('areaSector').value || 'Sector General';
+    const severidad = document.getElementById('potencialSeveridad').value || 'Alerta';
+
+    if (!destino) {
+      alert('Por favor, ingrese el correo electrónico del destinatario en la Sección 4.');
+      document.getElementById('emailDestino').focus();
+      return;
+    }
+
+    const asunto = `[ALERTA SST] Reporte Condición Subestándar ${cod} - ${area} (${severidad})`;
+    const cuerpo = construirCuerpoReporte();
+
+    let mailtoUrl = `mailto:${encodeURIComponent(destino)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    if (cc.trim() !== "") {
+      mailtoUrl += `&cc=${encodeURIComponent(cc)}`;
+    }
+
+    // Abre el cliente de correo predeterminado del dispositivo (Outlook, Gmail, Thunderbird, Mail de iOS/Android)
+    window.location.href = mailtoUrl;
+  }
+
+  // ===== PWA: Registro de Service Worker (funcionamiento offline) =====
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => {
+        console.warn('No se pudo registrar el Service Worker:', err);
+      });
+    });
+  }
+
+  // ===== PWA: Botón "Instalar Aplicación" (funciona en Android/Chrome/Edge, PC y móvil) =====
+  let deferredInstallPrompt = null;
+  const btnInstalar = document.getElementById('btnInstalarApp');
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    btnInstalar.style.display = 'inline-flex';
+  });
+
+  btnInstalar.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    btnInstalar.style.display = 'none';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    btnInstalar.style.display = 'none';
+  });
+</script>
+
+</body>
+</html>
