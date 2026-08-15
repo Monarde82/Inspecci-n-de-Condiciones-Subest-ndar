@@ -273,6 +273,52 @@
   .btn-secondary:hover {
     background: #5a6268;
   }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+  }
+  .btn-danger:hover {
+    background: #b02a37;
+  }
+
+  /* Grupos de radio buttons y checkboxes (mismo estilo del formulario original) */
+  .radio-group, .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .radio-option, .checkbox-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #333;
+  }
+  .radio-option input, .checkbox-option input {
+    width: auto;
+    margin-top: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .checkbox-option .hint {
+    font-weight: 400;
+    color: #888;
+    font-size: 12.5px;
+  }
+  .risk-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .risk-dot.alto { background: var(--danger); }
+  .risk-dot.medio { background: var(--warning); }
+  .risk-dot.bajo { background: var(--success); }
 
   /* Modal de Vista Previa */
   .modal-overlay {
@@ -348,6 +394,66 @@
   #btnInstalarApp:hover {
     background: var(--success-hover);
   }
+
+  /* Barra de progreso de llenado */
+  .progress-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 400;
+    background: var(--card-bg);
+    padding: 10px 0 8px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-bar-track {
+    background: #e9edf2;
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: var(--success);
+    height: 100%;
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.3s ease;
+  }
+  .progress-bar-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  /* Resaltado de campos obligatorios faltantes */
+  .campo-invalido {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(220,53,69,0.15) !important;
+  }
+  .grupo-invalido {
+    border: 1px solid var(--danger);
+    border-radius: 6px;
+    padding: 8px;
+    background: #fff5f5;
+  }
+
+  /* Botón de descarga de fotos */
+  .btn-download-photo {
+    display: none;
+    margin-top: 6px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .photo-slot.has-image .btn-download-photo {
+    display: inline-block;
+  }
 </style>
 </head>
 <body>
@@ -359,31 +465,53 @@
   <div class="header">
     <h1>Inspección de Condiciones Subestándar</h1>
     <p>Gestión de Seguridad y Salud en el Trabajo (SST)</p>
+    <p style="font-size:11.5px; color:#888; font-weight:400; margin-top:6px;">
+      SOC.SERV.PAMPA Y LAGUNA LTDA · RUT 76.752.800-0 &nbsp;|&nbsp; Empresa Mandante: ACF MINERA S.A.
+    </p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
+    </div>
+    <div class="progress-bar-label" id="progressBarLabel">0% completado</div>
   </div>
 
   <form id="inspectionForm" onsubmit="return false;">
     <div class="codigo-box">
       <span class="codigo-title">Código de Hallazgo:</span>
-      <span class="codigo-val" id="codigoDisplay">SST-CS-PLX-A-2026-08-0001</span>
-      <input type="hidden" id="codigoHallazgo" value="SST-CS-PLX-A-2026-08-0001">
+      <span class="codigo-val" id="codigoDisplay">Ingrese su nombre para generar el código</span>
+      <input type="hidden" id="codigoHallazgo" value="">
     </div>
+    <p style="font-size:12px; color:#777; margin:-15px 0 20px 4px;">El código se genera automáticamente y de forma correlativa según el nombre del reportante (guardado en este dispositivo).</p>
 
     <!-- 1. Datos del Reportante -->
     <div class="section">
       <h2>1. Datos del Reportante</h2>
       <div class="form-group">
         <label>Nombre del Reportante <span class="req">*</span></label>
-        <input type="text" id="nombreReportante" placeholder="Ej. Juan Pérez González" required>
+        <select id="nombreReportanteSelect" required onchange="manejarSeleccionReportante()">
+          <option value="">-- Seleccionar --</option>
+          <optgroup label="Supervisores" id="grupoSupervisores"></optgroup>
+          <optgroup label="Capataces" id="grupoCapataces"></optgroup>
+          <optgroup label="Prevencionista" id="grupoPrevencionistas"></optgroup>
+          <option value="__OTRO__">Otro (especificar nombre y cargo)</option>
+        </select>
+        <input type="text" id="nombreReportanteOtro" placeholder="Escriba su nombre completo" style="display:none; margin-top:8px;" onblur="generarCodigoPorReportante()">
       </div>
       <div class="row">
         <div class="col">
           <label>Cargo <span class="req">*</span></label>
-          <input type="text" id="cargoReportante" placeholder="Ej. Supervisor de Operaciones / Prevencionista" required>
+          <input type="text" id="cargoReportante" placeholder="Se completa según el nombre seleccionado" required readonly>
         </div>
         <div class="col">
           <label>Empresa <span class="req">*</span></label>
           <input type="text" id="empresaReportante" placeholder="Ej. Compañía Minera / Contratista" required>
         </div>
+      </div>
+      <div class="form-group">
+        <label>Firma (Nombre y Apellido) <span class="req">*</span></label>
+        <input type="text" id="firmaReportante" placeholder="Escriba su nombre completo como firma" required>
       </div>
     </div>
 
@@ -432,8 +560,9 @@
       </div>
 
       <!-- CAPACIDAD PARA 3 FOTOGRAFÍAS -->
-      <div class="form-group">
-        <label>Registro Fotográfico (Hasta 3 Fotografías del Hallazgo):</label>
+      <div class="form-group" id="grupoFotos">
+        <label>Registro Fotográfico <span class="req">*</span> (Hasta 3 Fotografías del Hallazgo, mínimo 1 obligatoria)</label>
+        <p style="font-size:12px; color:#777; margin:-4px 0 8px;">Al tocar "Seleccionar Foto" se abre la cámara del dispositivo directamente.</p>
         <div class="photo-grid">
           
           <!-- Foto 1 -->
@@ -442,7 +571,8 @@
             <img id="img-preview-1" style="display:none;" alt="Foto 1">
             <span id="placeholder-1" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 1: Vista General</span>
             <label class="photo-label-btn" for="foto1">Seleccionar Foto 1</label>
-            <input type="file" id="foto1" accept="image/*" onchange="previewImage(event, 1)">
+            <input type="file" id="foto1" accept="image/*" capture="environment" onchange="previewImage(event, 1)">
+            <button type="button" class="btn-download-photo" id="btnDescargar-1" onclick="descargarFoto(1)">📥 Descargar</button>
           </div>
 
           <!-- Foto 2 -->
@@ -451,7 +581,8 @@
             <img id="img-preview-2" style="display:none;" alt="Foto 2">
             <span id="placeholder-2" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 2: Detalle / Acercamiento</span>
             <label class="photo-label-btn" for="foto2">Seleccionar Foto 2</label>
-            <input type="file" id="foto2" accept="image/*" onchange="previewImage(event, 2)">
+            <input type="file" id="foto2" accept="image/*" capture="environment" onchange="previewImage(event, 2)">
+            <button type="button" class="btn-download-photo" id="btnDescargar-2" onclick="descargarFoto(2)">📥 Descargar</button>
           </div>
 
           <!-- Foto 3 -->
@@ -460,9 +591,28 @@
             <img id="img-preview-3" style="display:none;" alt="Foto 3">
             <span id="placeholder-3" style="font-size:12px; color:#888; margin-bottom:8px;">Foto 3: Entorno / Medida Inmediata</span>
             <label class="photo-label-btn" for="foto3">Seleccionar Foto 3</label>
-            <input type="file" id="foto3" accept="image/*" onchange="previewImage(event, 3)">
+            <input type="file" id="foto3" accept="image/*" capture="environment" onchange="previewImage(event, 3)">
+            <button type="button" class="btn-download-photo" id="btnDescargar-3" onclick="descargarFoto(3)">📥 Descargar</button>
           </div>
 
+        </div>
+        <button type="button" class="btn btn-secondary" style="margin-top:12px; display:none;" id="btnDescargarTodas" onclick="descargarTodasLasFotos()">📥 Descargar las 3 Fotos (para adjuntar al correo)</button>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>¿El hallazgo fue reportado anteriormente? <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="fueReportadoAntes" value="Sí" required> Sí</label>
+            <label class="radio-option"><input type="radio" name="fueReportadoAntes" value="No" checked> No</label>
+          </div>
+        </div>
+        <div class="col">
+          <label>¿Requiere atención urgente? <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="requiereUrgencia" value="Sí" required> Sí</label>
+            <label class="radio-option"><input type="radio" name="requiereUrgencia" value="No" checked> No</label>
+          </div>
         </div>
       </div>
     </div>
@@ -470,29 +620,43 @@
     <!-- 3. Clasificación del Riesgo y Medidas -->
     <div class="section">
       <h2>3. Clasificación del Riesgo y Control</h2>
-      <div class="row">
-        <div class="col">
-          <label>Tipo de Peligro / Riesgo <span class="req">*</span></label>
-          <select id="tipoRiesgo" required>
-            <option value="">-- Seleccionar Tipo --</option>
-            <option value="Seguridad / Mecánico">Seguridad / Mecánico</option>
-            <option value="Químico (Sustancias Peligrosas)">Químico (Sustancias Peligrosas)</option>
-            <option value="Eléctrico">Eléctrico</option>
-            <option value="Biológico">Biológico</option>
-            <option value="Físico (Ruido, Vibración, Temperatura)">Físico (Ruido, Vibración, Temperatura)</option>
-            <option value="Locativo / Caídas a mismo/distinto nivel">Locativo / Caídas a mismo/distinto nivel</option>
-            <option value="Ergonómico / Manejo Manual de Cargas">Ergonómico / Manejo Manual de Cargas</option>
-            <option value="Incendio / Emergencia">Incendio / Emergencia</option>
-            <option value="Ambiental">Ambiental</option>
-          </select>
+
+      <div class="form-group">
+        <label>Tipo de Riesgo <span class="req">*</span> (puede marcar más de uno)</label>
+        <div class="checkbox-group" id="grupoTipoRiesgo">
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Físico"> Físico <span class="hint">(ruido, radiación, temperatura, vibración)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Biológico"> Biológico <span class="hint">(virus, bacterias, hongos)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Fuego y Explosión"> Fuego y Explosión <span class="hint">(materiales inflamables, atmósferas explosivas)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Falta de Señalización"> Falta de Señalización <span class="hint">(ausencia de señales de advertencia o información)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Fallas en Sistemas de Emergencia"> Fallas en Sistemas de Emergencia <span class="hint">(extintores, alarmas, salidas de emergencia)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Químico"> Químico <span class="hint">(exposición a sustancias peligrosas)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Mecánico"> Mecánico <span class="hint">(maquinaria, herramientas, equipos en movimiento)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Ergonómico"> Ergonómico <span class="hint">(posturas, movimientos repetitivos, manipulación de cargas)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Ambiental"> Ambiental <span class="hint">(polvo, humedad, ventilación insuficiente)</span></label>
+          <label class="checkbox-option"><input type="checkbox" name="tipoRiesgo" value="Seguridad"> Seguridad <span class="hint">(riesgos de caídas, golpes, atrapamientos)</span></label>
+          <label class="checkbox-option">
+            <input type="checkbox" id="tipoRiesgoOtroCheck" onchange="toggleTipoRiesgoOtro()"> Otro (Especificar)
+          </label>
         </div>
-        <div class="col">
-          <label>Potencial de Severidad <span class="req">*</span></label>
-          <select id="potencialSeveridad" required>
-            <option value="Bajo (Leve)">Bajo (Leve)</option>
-            <option value="Medio (Moderado)">Medio (Moderado)</option>
-            <option value="Alto (Grave / Crítico)" selected>Alto (Grave / Crítico)</option>
-          </select>
+        <input type="text" id="tipoRiesgoOtroTexto" style="display:none; margin-top:8px;" placeholder="Especifique el tipo de riesgo">
+      </div>
+
+      <div class="form-group">
+        <label>Nivel de Riesgo <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-option"><input type="radio" name="nivelRiesgo" value="Alto (Peligro inminente)" required><span class="risk-dot alto"></span> Alto (Peligro inminente)</label>
+          <label class="radio-option"><input type="radio" name="nivelRiesgo" value="Medio (Reparar)"><span class="risk-dot medio"></span> Medio (Reparar)</label>
+          <label class="radio-option"><input type="radio" name="nivelRiesgo" value="Bajo (Mejora menor)" checked><span class="risk-dot bajo"></span> Bajo (Mejora menor)</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>¿Se debe detener el trabajo debido a la condición insegura identificada? <span class="req">*</span></label>
+        <p style="font-size:12.5px; color:#888; margin:-4px 0 8px;">Indique si la condición representa un riesgo que requiere la suspensión inmediata de las actividades.</p>
+        <div class="radio-group">
+          <label class="radio-option"><input type="radio" name="detenerTrabajo" value="Sí, se debe detener el trabajo" required> Sí, se debe detener el trabajo</label>
+          <label class="radio-option"><input type="radio" name="detenerTrabajo" value="No, se puede continuar con precaución" checked> No, se puede continuar con precaución</label>
+          <label class="radio-option"><input type="radio" name="detenerTrabajo" value="No aplica"> No aplica</label>
         </div>
       </div>
 
@@ -511,6 +675,36 @@
           <input type="date" id="plazoCierre">
         </div>
       </div>
+
+      <div class="form-group">
+        <label>Responsable de la Condición <span class="req">*</span></label>
+        <p style="font-size:12.5px; color:#888; margin:-4px 0 8px;">Indica quién es responsable por la condición reportada. <strong>Mandante</strong> = ACF MINERA S.A. &nbsp;|&nbsp; <strong>Nuestra empresa</strong> = SOC.SERV.PAMPA Y LAGUNA LTDA.</p>
+        <div class="radio-group" id="grupoResponsableCondicion">
+          <label class="radio-option"><input type="radio" name="responsableCondicion" value="Mandante" required onchange="toggleOtroRadio('responsableCondicion', 'responsableCondicionOtro')"> Mandante (ACF Minera S.A.)</label>
+          <label class="radio-option"><input type="radio" name="responsableCondicion" value="Nuestra empresa" onchange="toggleOtroRadio('responsableCondicion', 'responsableCondicionOtro')"> Nuestra empresa (Soc.Serv. Pampa y Laguna Ltda.)</label>
+          <label class="radio-option"><input type="radio" name="responsableCondicion" value="Ambos" onchange="toggleOtroRadio('responsableCondicion', 'responsableCondicionOtro')"> Ambos</label>
+          <label class="radio-option"><input type="radio" name="responsableCondicion" value="Otro" onchange="toggleOtroRadio('responsableCondicion', 'responsableCondicionOtro')"> Otro</label>
+        </div>
+        <input type="text" id="responsableCondicionOtro" style="display:none; margin-top:8px;" placeholder="Especifique">
+      </div>
+
+      <div class="form-group">
+        <label>Seguimiento de la Condición</label>
+        <p style="font-size:12.5px; color:#888; margin:-4px 0 8px;">Describe las acciones tomadas, responsable y fecha de seguimiento.</p>
+        <textarea id="seguimientoCondicion" placeholder="Ej. la operación está en acción"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>¿Quién realizó el seguimiento de la condición?</label>
+        <div class="radio-group">
+          <label class="radio-option"><input type="radio" name="quienSeguimiento" value="Mandante" onchange="toggleOtroRadio('quienSeguimiento', 'quienSeguimientoOtro')"> Mandante (ACF Minera S.A.)</label>
+          <label class="radio-option"><input type="radio" name="quienSeguimiento" value="Nuestra empresa" onchange="toggleOtroRadio('quienSeguimiento', 'quienSeguimientoOtro')"> Nuestra empresa (Soc.Serv. Pampa y Laguna Ltda.)</label>
+          <label class="radio-option"><input type="radio" name="quienSeguimiento" value="Ambos" onchange="toggleOtroRadio('quienSeguimiento', 'quienSeguimientoOtro')"> Ambos</label>
+          <label class="radio-option"><input type="radio" name="quienSeguimiento" value="Otro" onchange="toggleOtroRadio('quienSeguimiento', 'quienSeguimientoOtro')"> Otro</label>
+          <label class="radio-option"><input type="radio" name="quienSeguimiento" value="No se ha realizado seguimiento" checked onchange="toggleOtroRadio('quienSeguimiento', 'quienSeguimientoOtro')"> No se ha realizado seguimiento</label>
+        </div>
+        <input type="text" id="quienSeguimientoOtro" style="display:none; margin-top:8px;" placeholder="Especifique">
+      </div>
     </div>
 
     <!-- 4. Destinatarios del Correo -->
@@ -528,7 +722,8 @@
 
     <!-- Botones de Acción -->
     <div class="actions-container">
-      <button type="button" class="btn btn-secondary" onclick="generarNuevoCodigo()">🔄 Generar Nuevo Código</button>
+      <button type="button" class="btn btn-danger" onclick="borrarDatosFormulario()">🗑️ Borrar Datos y Continuar</button>
+      <button type="button" class="btn btn-secondary" onclick="generarNuevoCodigoManual()">🔄 Generar Nuevo Código</button>
       <button type="button" class="btn btn-primary" onclick="mostrarModalPrevia()">👁️ Vista Previa del Reporte</button>
       <button type="button" class="btn btn-success" onclick="enviarCorreoElectronico()">📧 Generar y Enviar Correo</button>
     </div>
@@ -544,7 +739,12 @@
     </div>
     <p style="font-size:13px; color:#555;">Este es el formato estructurado del hallazgo que se remitirá a través de correo electrónico:</p>
     <div class="email-preview-box" id="previewContent"></div>
+    <p id="avisoLargoCorreo" style="display:none; font-size:12.5px; color:var(--danger); margin-top:10px;">
+      ⚠️ Este reporte es extenso y podría no abrirse completo en algunos clientes de correo (especialmente Outlook de escritorio).
+      Si al enviarlo el correo aparece vacío o incompleto, use el botón "📋 Copiar Texto" y péguelo manualmente en el cuerpo del correo.
+    </p>
     <div style="margin-top:15px; text-align:right;">
+      <button class="btn btn-secondary" onclick="copiarTextoReporte()">📋 Copiar Texto</button>
       <button class="btn btn-secondary" onclick="cerrarModal()">Cerrar</button>
       <button class="btn btn-success" onclick="cerrarModal(); enviarCorreoElectronico();">Confirmar y Abrir en Cliente de Correo</button>
     </div>
@@ -552,29 +752,445 @@
 </div>
 
 <script>
-  // Inicialización de Fecha y Hora actual
-  window.addEventListener('DOMContentLoaded', () => {
+  // ===== Sección 3: Tipo de Riesgo (checkbox "Otro") y radios con opción "Otro" =====
+  function toggleTipoRiesgoOtro() {
+    const check = document.getElementById('tipoRiesgoOtroCheck');
+    const texto = document.getElementById('tipoRiesgoOtroTexto');
+    texto.style.display = check.checked ? 'block' : 'none';
+    if (check.checked) texto.focus(); else texto.value = '';
+  }
+
+  // Muestra/oculta el campo de texto "Otro" asociado a un grupo de radios
+  function toggleOtroRadio(nombreGrupo, idCampoOtro) {
+    const seleccionado = document.querySelector(`input[name="${nombreGrupo}"]:checked`);
+    const campoOtro = document.getElementById(idCampoOtro);
+    if (seleccionado && seleccionado.value === 'Otro') {
+      campoOtro.style.display = 'block';
+      campoOtro.focus();
+    } else {
+      campoOtro.style.display = 'none';
+      campoOtro.value = '';
+    }
+  }
+
+  function obtenerValorRadio(nombreGrupo) {
+    const seleccionado = document.querySelector(`input[name="${nombreGrupo}"]:checked`);
+    return seleccionado ? seleccionado.value : '';
+  }
+
+  function obtenerTiposRiesgoSeleccionados() {
+    const marcados = Array.from(document.querySelectorAll('input[name="tipoRiesgo"]:checked')).map(cb => cb.value);
+    const otroCheck = document.getElementById('tipoRiesgoOtroCheck');
+    if (otroCheck.checked) {
+      const texto = document.getElementById('tipoRiesgoOtroTexto').value.trim();
+      marcados.push(texto ? `Otro: ${texto}` : 'Otro');
+    }
+    return marcados;
+  }
+
+
+  function inicializarFechaHora() {
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     document.getElementById('fechaHallazgo').value = `${yyyy}-${mm}-${dd}`;
-    
+
     const hh = String(today.getHours()).padStart(2, '0');
     const min = String(today.getMinutes()).padStart(2, '0');
     document.getElementById('horaHallazgo').value = `${hh}:${min}`;
-  });
+  }
+  // (La inicialización completa —fecha/hora, nómina y borrador— se registra al final del script)
 
-  // Generador de código aleatorio correlativo
-  function generarNuevoCodigo() {
+  // ===== Identificación de la empresa contratista y mandante =====
+  const EMPRESA_CONTRATISTA = 'SOC.SERV.PAMPA Y LAGUNA LTDA';
+  const RUT_CONTRATISTA = '76.752.800-0';
+  const EMPRESA_MANDANTE = 'ACF MINERA S.A.';
+
+  // ===== Listado de Reportantes (Supervisores / Capataces / Prevencionista) =====
+  // Fuente: documento original "Inspección de SST / Condiciones Subestándar"
+  const REPORTANTES = {
+    supervisores: [
+      { nombre: 'Jorge González', cargo: 'Supervisor', empresa: EMPRESA_CONTRATISTA },
+      { nombre: 'Cesar Alvarez', cargo: 'Supervisor', empresa: EMPRESA_CONTRATISTA }
+    ],
+    capataces: [
+      { nombre: 'Victor Bustamante', cargo: 'Capataz', empresa: EMPRESA_CONTRATISTA },
+      { nombre: 'Alex Flores', cargo: 'Capataz', empresa: EMPRESA_CONTRATISTA },
+      { nombre: 'Iván Villanueva', cargo: 'Capataz', empresa: EMPRESA_CONTRATISTA }
+    ],
+    prevencionistas: [
+      { nombre: 'Miguel Monarde', cargo: 'APR', empresa: EMPRESA_CONTRATISTA }
+    ]
+  };
+
+  function poblarSelectReportantes() {
+    const grupos = [
+      { key: 'supervisores', elId: 'grupoSupervisores' },
+      { key: 'capataces', elId: 'grupoCapataces' },
+      { key: 'prevencionistas', elId: 'grupoPrevencionistas' }
+    ];
+    grupos.forEach(({ key, elId }) => {
+      const optgroup = document.getElementById(elId);
+      REPORTANTES[key].forEach((persona, idx) => {
+        const opt = document.createElement('option');
+        opt.value = `${key}__${idx}`;
+        opt.textContent = persona.nombre;
+        optgroup.appendChild(opt);
+      });
+    });
+  }
+
+  // Se ejecuta al elegir un nombre del desplegable
+  function manejarSeleccionReportante() {
+    const select = document.getElementById('nombreReportanteSelect');
+    const campoOtro = document.getElementById('nombreReportanteOtro');
+    const campoCargo = document.getElementById('cargoReportante');
+    const valor = select.value;
+
+    if (valor === '__OTRO__') {
+      campoOtro.style.display = 'block';
+      campoOtro.required = true;
+      campoOtro.value = '';
+      campoCargo.value = '';
+      campoCargo.readOnly = false;
+      campoCargo.placeholder = 'Escriba su cargo';
+      campoOtro.focus();
+      return;
+    }
+
+    campoOtro.style.display = 'none';
+    campoOtro.required = false;
+    campoOtro.value = '';
+
+    if (!valor) {
+      campoCargo.value = '';
+      campoCargo.readOnly = true;
+      campoCargo.placeholder = 'Se completa según el nombre seleccionado';
+      return;
+    }
+
+    const [grupo, idx] = valor.split('__');
+    const persona = REPORTANTES[grupo][parseInt(idx, 10)];
+    if (persona.cargo) {
+      campoCargo.value = persona.cargo;
+      campoCargo.readOnly = true;
+    } else {
+      // Esta persona no tiene cargo registrado en la nómina: se completa manualmente
+      campoCargo.value = '';
+      campoCargo.readOnly = false;
+      campoCargo.placeholder = 'Escriba el cargo de ' + persona.nombre;
+    }
+
+    // Autocompletar Empresa (queda editable por si el reportante es de otra contratista)
+    const campoEmpresa = document.getElementById('empresaReportante');
+    if (persona.empresa && !campoEmpresa.value.trim()) {
+      campoEmpresa.value = persona.empresa;
+    }
+
+    generarCodigoPorReportante();
+  }
+
+  // Devuelve el nombre "efectivo" del reportante, venga del selector o del campo "Otro"
+  function obtenerNombreReportanteActual() {
+    const select = document.getElementById('nombreReportanteSelect');
+    if (select.value === '__OTRO__') {
+      return document.getElementById('nombreReportanteOtro').value.trim();
+    }
+    if (!select.value) return '';
+    const [grupo, idx] = select.value.split('__');
+    return REPORTANTES[grupo][parseInt(idx, 10)].nombre;
+  }
+
+  // (registrada más abajo, en la inicialización consolidada)
+
+
+  // Cada reportante tiene su propio contador correlativo, guardado en este dispositivo (localStorage).
+  // Formato del código: SST-CS-PLX-A-<INICIALES>-AAAA-MM-NNNN
+  let ultimoNombreConCodigoGenerado = '';
+  let restaurandoBorrador = false; // evita generar/consumir un correlativo nuevo mientras se recupera un borrador
+
+  function obtenerInicialesReportante(nombre) {
+    const iniciales = nombre
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(p => p[0].toUpperCase())
+      .join('')
+      .slice(0, 4);
+    return iniciales || 'GEN';
+  }
+
+  // ===== Acceso seguro a localStorage =====
+  // Algunos navegadores (modo privado de Safari/iOS, políticas de empresa) bloquean localStorage
+  // y lanzan una excepción al usarlo. Esta capa evita que la app se rompa en esos casos: si no
+  // está disponible, sigue funcionando con un respaldo en memoria (se pierde al cerrar la pestaña,
+  // pero no afecta el llenado ni el envío del reporte).
+  const almacenamientoMemoria = {};
+  const LS_OK = (() => {
+    try {
+      const clave = '__sst_test__';
+      localStorage.setItem(clave, '1');
+      localStorage.removeItem(clave);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  function lsGet(clave) {
+    if (LS_OK) {
+      try { return localStorage.getItem(clave); } catch (e) { /* usar respaldo */ }
+    }
+    return Object.prototype.hasOwnProperty.call(almacenamientoMemoria, clave) ? almacenamientoMemoria[clave] : null;
+  }
+  function lsSet(clave, valor) {
+    if (LS_OK) {
+      try { localStorage.setItem(clave, valor); return; } catch (e) { /* usar respaldo */ }
+    }
+    almacenamientoMemoria[clave] = String(valor);
+  }
+  function lsRemove(clave) {
+    if (LS_OK) {
+      try { localStorage.removeItem(clave); return; } catch (e) { /* usar respaldo */ }
+    }
+    delete almacenamientoMemoria[clave];
+  }
+
+  function generarCodigoParaNombre(nombre, forzarIncremento) {
+    const iniciales = obtenerInicialesReportante(nombre);
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const corr = Math.floor(1000 + Math.random() * 9000);
-    const cod = `SST-CS-PLX-A-${yyyy}-${mm}-${corr}`;
+
+    const claveContador = `sst_correlativo_${iniciales}`;
+    let contador = parseInt(lsGet(claveContador) || '0', 10);
+    if (forzarIncremento || contador === 0) {
+      contador += 1;
+      lsSet(claveContador, contador);
+    }
+
+    const cod = `SST-CS-PLX-A-${iniciales}-${yyyy}-${mm}-${String(contador).padStart(4, '0')}`;
     document.getElementById('codigoDisplay').innerText = cod;
     document.getElementById('codigoHallazgo').value = cod;
+    ultimoNombreConCodigoGenerado = nombre;
   }
+
+  // Se llama automáticamente al elegir un nombre del desplegable o al salir del campo "Otro"
+  function generarCodigoPorReportante() {
+    if (restaurandoBorrador) return;
+    const nombre = obtenerNombreReportanteActual();
+    if (!nombre) return;
+    if (nombre === ultimoNombreConCodigoGenerado) return; // evita reincrementar si no cambió el nombre
+    generarCodigoParaNombre(nombre, false);
+  }
+
+  // Botón "Generar Nuevo Código": fuerza un nuevo correlativo para el nombre actual
+  function generarNuevoCodigoManual() {
+    const nombre = obtenerNombreReportanteActual();
+    if (!nombre) {
+      alert('Seleccione primero el nombre del reportante en la Sección 1.');
+      document.getElementById('nombreReportanteSelect').focus();
+      return;
+    }
+    generarCodigoParaNombre(nombre, true);
+  }
+
+  // ===== Borrado de datos: limpia el formulario para corregir y continuar con un nuevo hallazgo =====
+  function borrarDatosFormulario() {
+    const confirmar = confirm('¿Borrar todos los datos del formulario? Esta acción no se puede deshacer.');
+    if (!confirmar) return;
+
+    document.getElementById('inspectionForm').reset();
+    removePhoto(1);
+    removePhoto(2);
+    removePhoto(3);
+
+    // Restablecer el campo Cargo y el campo "Otro" del reportante a su estado inicial
+    document.getElementById('nombreReportanteOtro').style.display = 'none';
+    document.getElementById('nombreReportanteOtro').required = false;
+    const campoCargo = document.getElementById('cargoReportante');
+    campoCargo.readOnly = true;
+    campoCargo.placeholder = 'Se completa según el nombre seleccionado';
+
+    // Ocultar los campos "Otro" de la Sección 3 (el reset() nativo no controla el display)
+    document.getElementById('tipoRiesgoOtroTexto').style.display = 'none';
+    document.getElementById('responsableCondicionOtro').style.display = 'none';
+    document.getElementById('quienSeguimientoOtro').style.display = 'none';
+
+    ultimoNombreConCodigoGenerado = '';
+    document.getElementById('codigoDisplay').innerText = 'Ingrese su nombre para generar el código';
+    document.getElementById('codigoHallazgo').value = '';
+
+    borrarBorrador();
+    actualizarProgreso();
+    inicializarFechaHora();
+    document.getElementById('nombreReportanteSelect').focus();
+  }
+
+  // ===== Guardado automático de borrador (localStorage) =====
+  // Protege el trabajo si la persona es interrumpida o pierde conexión a mitad del llenado.
+  // Las fotos NO se guardan en el borrador (por tamaño); deben volver a seleccionarse si se recupera.
+  const CLAVE_BORRADOR = 'sst_borrador_v1';
+  let guardadoBorradorTimeout = null;
+
+  function recolectarBorrador() {
+    return {
+      nombreReportanteSelect: document.getElementById('nombreReportanteSelect').value,
+      nombreReportanteOtro: document.getElementById('nombreReportanteOtro').value,
+      cargoReportante: document.getElementById('cargoReportante').value,
+      empresaReportante: document.getElementById('empresaReportante').value,
+      firmaReportante: document.getElementById('firmaReportante').value,
+      fechaHallazgo: document.getElementById('fechaHallazgo').value,
+      horaHallazgo: document.getElementById('horaHallazgo').value,
+      areaSector: document.getElementById('areaSector').value,
+      ubicacionExacta: document.getElementById('ubicacionExacta').value,
+      descripcionHallazgo: document.getElementById('descripcionHallazgo').value,
+      fueReportadoAntes: obtenerValorRadio('fueReportadoAntes'),
+      requiereUrgencia: obtenerValorRadio('requiereUrgencia'),
+      tipoRiesgo: Array.from(document.querySelectorAll('input[name="tipoRiesgo"]:checked')).map(cb => cb.value),
+      tipoRiesgoOtroCheck: document.getElementById('tipoRiesgoOtroCheck').checked,
+      tipoRiesgoOtroTexto: document.getElementById('tipoRiesgoOtroTexto').value,
+      nivelRiesgo: obtenerValorRadio('nivelRiesgo'),
+      detenerTrabajo: obtenerValorRadio('detenerTrabajo'),
+      accionCorrectiva: document.getElementById('accionCorrectiva').value,
+      responsableAccion: document.getElementById('responsableAccion').value,
+      plazoCierre: document.getElementById('plazoCierre').value,
+      responsableCondicion: obtenerValorRadio('responsableCondicion'),
+      responsableCondicionOtro: document.getElementById('responsableCondicionOtro').value,
+      seguimientoCondicion: document.getElementById('seguimientoCondicion').value,
+      quienSeguimiento: obtenerValorRadio('quienSeguimiento'),
+      quienSeguimientoOtro: document.getElementById('quienSeguimientoOtro').value,
+      emailDestino: document.getElementById('emailDestino').value,
+      emailCC: document.getElementById('emailCC').value,
+      codigoHallazgo: document.getElementById('codigoHallazgo').value,
+      codigoDisplay: document.getElementById('codigoDisplay').innerText
+    };
+  }
+
+  function guardarBorrador() {
+    lsSet(CLAVE_BORRADOR, JSON.stringify(recolectarBorrador()));
+  }
+
+  function programarGuardadoBorrador() {
+    clearTimeout(guardadoBorradorTimeout);
+    guardadoBorradorTimeout = setTimeout(guardarBorrador, 400);
+  }
+
+  function borrarBorrador() {
+    lsRemove(CLAVE_BORRADOR);
+  }
+
+  function restaurarCampo(id, valor) {
+    if (valor === undefined || valor === null) return;
+    const el = document.getElementById(id);
+    if (el) el.value = valor;
+  }
+
+  function restaurarRadio(nombreGrupo, valor) {
+    if (!valor) return;
+    document.querySelectorAll(`input[name="${nombreGrupo}"]`).forEach((r) => {
+      if (r.value === valor) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  function cargarBorrador() {
+    let datos;
+    try {
+      const guardado = lsGet(CLAVE_BORRADOR);
+      if (!guardado) return;
+      datos = JSON.parse(guardado);
+    } catch (e) {
+      return;
+    }
+
+    const tieneAlgo = Object.values(datos).some(v => (Array.isArray(v) ? v.length > 0 : !!v));
+    if (!tieneAlgo) return;
+
+    const restaurar = confirm('Se encontró un reporte sin enviar en este dispositivo. ¿Desea recuperarlo?\n\n(Nota: las fotos no se guardan en el borrador, deberá volver a seleccionarlas).');
+    if (!restaurar) {
+      borrarBorrador();
+      return;
+    }
+
+    restaurandoBorrador = true;
+
+    if (datos.nombreReportanteSelect) {
+      document.getElementById('nombreReportanteSelect').value = datos.nombreReportanteSelect;
+      manejarSeleccionReportante();
+    }
+    restaurarCampo('nombreReportanteOtro', datos.nombreReportanteOtro);
+    restaurarCampo('cargoReportante', datos.cargoReportante);
+    restaurarCampo('empresaReportante', datos.empresaReportante);
+    restaurarCampo('firmaReportante', datos.firmaReportante);
+    restaurarCampo('fechaHallazgo', datos.fechaHallazgo);
+    restaurarCampo('horaHallazgo', datos.horaHallazgo);
+    restaurarCampo('areaSector', datos.areaSector);
+    restaurarCampo('ubicacionExacta', datos.ubicacionExacta);
+    restaurarCampo('descripcionHallazgo', datos.descripcionHallazgo);
+
+    restaurarRadio('fueReportadoAntes', datos.fueReportadoAntes);
+    restaurarRadio('requiereUrgencia', datos.requiereUrgencia);
+
+    (datos.tipoRiesgo || []).forEach((valor) => {
+      document.querySelectorAll('input[name="tipoRiesgo"]').forEach((cb) => {
+        if (cb.value === valor) cb.checked = true;
+      });
+    });
+    if (datos.tipoRiesgoOtroCheck) {
+      document.getElementById('tipoRiesgoOtroCheck').checked = true;
+      toggleTipoRiesgoOtro();
+      restaurarCampo('tipoRiesgoOtroTexto', datos.tipoRiesgoOtroTexto);
+    }
+
+    restaurarRadio('nivelRiesgo', datos.nivelRiesgo);
+    restaurarRadio('detenerTrabajo', datos.detenerTrabajo);
+    restaurarCampo('accionCorrectiva', datos.accionCorrectiva);
+    restaurarCampo('responsableAccion', datos.responsableAccion);
+    restaurarCampo('plazoCierre', datos.plazoCierre);
+
+    restaurarRadio('responsableCondicion', datos.responsableCondicion);
+    restaurarCampo('responsableCondicionOtro', datos.responsableCondicionOtro);
+
+    restaurarCampo('seguimientoCondicion', datos.seguimientoCondicion);
+    restaurarRadio('quienSeguimiento', datos.quienSeguimiento);
+    restaurarCampo('quienSeguimientoOtro', datos.quienSeguimientoOtro);
+
+    restaurarCampo('emailDestino', datos.emailDestino);
+    restaurarCampo('emailCC', datos.emailCC);
+
+    restaurandoBorrador = false;
+
+    // Restaurar el código ya generado, sin volver a consumir el correlativo
+    if (datos.codigoHallazgo) {
+      document.getElementById('codigoHallazgo').value = datos.codigoHallazgo;
+      document.getElementById('codigoDisplay').innerText = datos.codigoDisplay || datos.codigoHallazgo;
+      ultimoNombreConCodigoGenerado = obtenerNombreReportanteActual();
+    }
+
+    actualizarProgreso();
+  }
+
+  // ===== Inicialización consolidada de la app =====
+  window.addEventListener('DOMContentLoaded', () => {
+    inicializarFechaHora();
+    poblarSelectReportantes();
+    cargarBorrador();
+    actualizarProgreso();
+
+    const formulario = document.getElementById('inspectionForm');
+    formulario.addEventListener('input', () => {
+      actualizarProgreso();
+      programarGuardadoBorrador();
+    });
+    formulario.addEventListener('change', () => {
+      actualizarProgreso();
+      programarGuardadoBorrador();
+    });
+  });
 
   // Almacenamiento local de fotos en Base64
   const photoData = { 1: null, 2: null, 3: null };
@@ -590,6 +1206,9 @@
         img.style.display = 'block';
         document.getElementById(`placeholder-${slot}`).style.display = 'none';
         document.getElementById(`slot-${slot}`).classList.add('has-image');
+        document.getElementById('grupoFotos').classList.remove('grupo-invalido');
+        actualizarBotonDescargarTodas();
+        actualizarProgreso();
       };
       reader.readAsDataURL(file);
     }
@@ -603,25 +1222,92 @@
     img.style.display = 'none';
     document.getElementById(`placeholder-${slot}`).style.display = 'block';
     document.getElementById(`slot-${slot}`).classList.remove('has-image');
+    actualizarBotonDescargarTodas();
+    actualizarProgreso();
+  }
+
+  // ===== Descarga de fotos (para adjuntarlas manualmente al correo, ya que mailto: no adjunta archivos) =====
+  // Safari/iOS ignora el atributo "download" en imágenes base64: en vez de descargar, abre la foto
+  // en una pestaña nueva sin avisar. En ese caso, se abre la imagen para que el usuario la guarde
+  // manualmente (mantener presionada → Guardar en Fotos).
+  function esIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function descargarFoto(slot) {
+    if (!photoData[slot]) return;
+    const cod = document.getElementById('codigoHallazgo').value || 'hallazgo';
+
+    if (esIOS()) {
+      const ventana = window.open(photoData[slot], '_blank');
+      if (!ventana) {
+        alert('El navegador bloqueó la apertura de la foto. Revise los permisos de ventanas emergentes e intente de nuevo.');
+      }
+      return;
+    }
+
+    const enlace = document.createElement('a');
+    enlace.href = photoData[slot];
+    enlace.download = `${cod}-foto${slot}.jpg`;
+    document.body.appendChild(enlace);
+    enlace.click();
+    document.body.removeChild(enlace);
+  }
+
+  function descargarTodasLasFotos() {
+    if (esIOS()) {
+      // En iOS cada descarga abre una pestaña nueva: hacerlo automático y en cadena
+      // suele ser bloqueado como popup. Se guía al usuario a descargarlas una por una.
+      alert('En iPhone/iPad, use el botón "📥 Descargar" de cada foto por separado (una a la vez) para evitar que el navegador las bloquee.');
+      return;
+    }
+    [1, 2, 3].forEach((slot) => {
+      if (photoData[slot]) {
+        setTimeout(() => descargarFoto(slot), slot * 300); // pequeño retraso entre descargas
+      }
+    });
+  }
+
+  function actualizarBotonDescargarTodas() {
+    const hayFotos = photoData[1] || photoData[2] || photoData[3];
+    document.getElementById('btnDescargarTodas').style.display = hayFotos ? 'inline-flex' : 'none';
   }
 
   function construirCuerpoReporte() {
     const cod = document.getElementById('codigoHallazgo').value;
-    const reportante = document.getElementById('nombreReportante').value || 'No indicado';
+    const reportante = obtenerNombreReportanteActual() || 'No indicado';
     const cargo = document.getElementById('cargoReportante').value || 'No indicado';
     const empresa = document.getElementById('empresaReportante').value || 'No indicado';
-    
+    const firma = document.getElementById('firmaReportante').value || 'No indicado';
+
     const fecha = document.getElementById('fechaHallazgo').value || 'No indicado';
     const hora = document.getElementById('horaHallazgo').value || 'No indicado';
     const area = document.getElementById('areaSector').value || 'No indicado';
     const ubicacion = document.getElementById('ubicacionExacta').value || 'No indicado';
     const descripcion = document.getElementById('descripcionHallazgo').value || 'Sin detalle';
-    
-    const riesgo = document.getElementById('tipoRiesgo').value || 'No clasificado';
-    const severidad = document.getElementById('potencialSeveridad').value || 'No especificado';
+    const reportadoAntes = obtenerValorRadio('fueReportadoAntes') || 'No indicado';
+    const requiereUrgencia = obtenerValorRadio('requiereUrgencia') || 'No indicado';
+
+    const tiposRiesgo = obtenerTiposRiesgoSeleccionados();
+    const riesgo = tiposRiesgo.length ? tiposRiesgo.join(', ') : 'No clasificado';
+    const nivelRiesgo = obtenerValorRadio('nivelRiesgo') || 'No especificado';
+    const detenerTrabajo = obtenerValorRadio('detenerTrabajo') || 'No indicado';
     const accion = document.getElementById('accionCorrectiva').value || 'Pendiente de definición';
     const responsable = document.getElementById('responsableAccion').value || 'No asignado';
     const plazo = document.getElementById('plazoCierre').value || 'Inmediato / Por coordinar';
+
+    let responsableCondicion = obtenerValorRadio('responsableCondicion') || 'No indicado';
+    if (responsableCondicion === 'Otro') {
+      const otro = document.getElementById('responsableCondicionOtro').value.trim();
+      responsableCondicion = otro ? `Otro: ${otro}` : 'Otro';
+    }
+
+    const seguimiento = document.getElementById('seguimientoCondicion').value || 'Sin seguimiento registrado';
+    let quienSeguimiento = obtenerValorRadio('quienSeguimiento') || 'No indicado';
+    if (quienSeguimiento === 'Otro') {
+      const otro = document.getElementById('quienSeguimientoOtro').value.trim();
+      quienSeguimiento = otro ? `Otro: ${otro}` : 'Otro';
+    }
 
     let conteoFotos = 0;
     if (photoData[1]) conteoFotos++;
@@ -632,6 +1318,8 @@
 REPORTE DE INSPECCIÓN: CONDICIÓN SUBESTÁNDAR
 SISTEMA DE GESTIÓN DE SEGURIDAD Y SALUD EN EL TRABAJO
 =====================================================
+Empresa Contratista: ${EMPRESA_CONTRATISTA} — RUT: ${RUT_CONTRATISTA}
+Empresa Mandante: ${EMPRESA_MANDANTE}
 Código de Registro: ${cod}
 Fecha/Hora Reporte: ${fecha} ${hora}
 
@@ -640,6 +1328,7 @@ Fecha/Hora Reporte: ${fecha} ${hora}
 • Nombre: ${reportante}
 • Cargo: ${cargo}
 • Empresa: ${empresa}
+• Firma: ${firma}
 
 2. DETALLE DEL HALLAZGO:
 -----------------------------------------------------
@@ -647,26 +1336,38 @@ Fecha/Hora Reporte: ${fecha} ${hora}
 • Ubicación Específica: ${ubicacion}
 • Descripción de la Condición Insegura:
   ${descripcion}
+• ¿Fue reportado anteriormente?: ${reportadoAntes}
+• ¿Requiere atención urgente?: ${requiereUrgencia}
 
 3. EVALUACIÓN Y MEDIDAS DE CONTROL:
 -----------------------------------------------------
-• Tipo de Peligro / Riesgo: ${riesgo}
-• Potencial de Severidad: ${severidad}
+• Tipo de Riesgo: ${riesgo}
+• Nivel de Riesgo: ${nivelRiesgo}
+• ¿Se debe detener el trabajo?: ${detenerTrabajo}
 • Medida Correctiva / Mitigación:
   ${accion}
-• Responsable Designado: ${responsable}
+• Responsable de la Corrección: ${responsable}
 • Plazo Estimado de Solución: ${plazo}
+• Responsable de la Condición: ${responsableCondicion}
+• Seguimiento de la Condición:
+  ${seguimiento}
+• ¿Quién realizó el seguimiento?: ${quienSeguimiento}
 
 4. REGISTRO FOTOGRÁFICO:
 -----------------------------------------------------
-• Fotografías adjuntas al reporte: ${conteoFotos} de 3 cargadas en la aplicación.
-*(Nota: Adjunte las imágenes descargadas/capturadas si su cliente de correo lo requiere).*
+• Fotografías cargadas en la aplicación: ${conteoFotos} de 3.
+*(Nota: use el botón "📥 Descargar Fotos" en la app antes de enviar, y adjúntelas manualmente a este correo desde su galería).*
 =====================================================`;
   }
+
+  // Umbral seguro: algunos clientes de correo (ej. Outlook de escritorio clásico) truncan
+  // enlaces mailto: muy largos. Por encima de este largo de cuerpo, se avisa al usuario.
+  const LARGO_SEGURO_CORREO = 1500;
 
   function mostrarModalPrevia() {
     const cuerpo = construirCuerpoReporte();
     document.getElementById('previewContent').innerText = cuerpo;
+    document.getElementById('avisoLargoCorreo').style.display = cuerpo.length > LARGO_SEGURO_CORREO ? 'block' : 'none';
     document.getElementById('modalPreview').classList.add('active');
   }
 
@@ -674,26 +1375,170 @@ Fecha/Hora Reporte: ${fecha} ${hora}
     document.getElementById('modalPreview').classList.remove('active');
   }
 
+  // Copia el texto completo del reporte al portapapeles (respaldo si el correo no abre completo)
+  function copiarTextoReporte() {
+    const cuerpo = construirCuerpoReporte();
+
+    const copiarConFallback = () => {
+      // Método clásico: funciona incluso sin navigator.clipboard (contextos no seguros, navegadores viejos)
+      const textarea = document.createElement('textarea');
+      textarea.value = cuerpo;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        alert('Texto del reporte copiado al portapapeles.');
+      } catch (e) {
+        alert('No se pudo copiar automáticamente. Seleccione y copie el texto manualmente desde la vista previa.');
+      }
+      document.body.removeChild(textarea);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(cuerpo)
+        .then(() => alert('Texto del reporte copiado al portapapeles.'))
+        .catch(copiarConFallback);
+    } else {
+      copiarConFallback();
+    }
+  }
+
+  // ===== Validación visual: resalta en rojo los campos/grupos obligatorios sin completar =====
+  function validarFormulario() {
+    let primerInvalido = null;
+
+    const marcar = (el, esGrupo) => {
+      if (!el) return;
+      el.classList.add(esGrupo ? 'grupo-invalido' : 'campo-invalido');
+      if (!primerInvalido) primerInvalido = el;
+    };
+    const limpiar = (el, esGrupo) => {
+      if (!el) return;
+      el.classList.remove(esGrupo ? 'grupo-invalido' : 'campo-invalido');
+    };
+
+    // Nombre del reportante (select + campo "Otro" si corresponde)
+    const selectNombre = document.getElementById('nombreReportanteSelect');
+    limpiar(selectNombre);
+    if (!selectNombre.value) {
+      marcar(selectNombre);
+    } else if (selectNombre.value === '__OTRO__') {
+      const campoOtro = document.getElementById('nombreReportanteOtro');
+      limpiar(campoOtro);
+      if (!campoOtro.value.trim()) marcar(campoOtro);
+    }
+
+    // Campos de texto / select / fecha simples obligatorios
+    const idsSimples = ['cargoReportante', 'empresaReportante', 'firmaReportante', 'fechaHallazgo',
+      'horaHallazgo', 'areaSector', 'ubicacionExacta', 'descripcionHallazgo', 'emailDestino'];
+    idsSimples.forEach((id) => {
+      const el = document.getElementById(id);
+      limpiar(el);
+      if (!el.value || !el.value.trim()) marcar(el);
+    });
+
+    // Registro Fotográfico: mínimo 1 foto obligatoria
+    const grupoFotos = document.getElementById('grupoFotos');
+    limpiar(grupoFotos, true);
+    if (!photoData[1] && !photoData[2] && !photoData[3]) marcar(grupoFotos, true);
+
+    // Grupos de radio obligatorios
+    const gruposRadio = ['fueReportadoAntes', 'requiereUrgencia', 'nivelRiesgo', 'detenerTrabajo', 'responsableCondicion'];
+    gruposRadio.forEach((nombreGrupo) => {
+      const primerInput = document.querySelector(`input[name="${nombreGrupo}"]`);
+      const contenedor = primerInput ? primerInput.closest('.radio-group') : null;
+      limpiar(contenedor, true);
+      if (!obtenerValorRadio(nombreGrupo)) marcar(contenedor, true);
+    });
+
+    // Tipo de Riesgo (checkboxes)
+    const grupoTipoRiesgo = document.getElementById('grupoTipoRiesgo');
+    limpiar(grupoTipoRiesgo, true);
+    if (obtenerTiposRiesgoSeleccionados().length === 0) marcar(grupoTipoRiesgo, true);
+
+    if (primerInvalido) {
+      primerInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof primerInvalido.focus === 'function') primerInvalido.focus();
+    }
+
+    return !primerInvalido;
+  }
+
+  // ===== Barra de progreso de llenado =====
+  function actualizarProgreso() {
+    let total = 0;
+    let completados = 0;
+
+    const contarSimple = (id) => {
+      total++;
+      const el = document.getElementById(id);
+      if (el && el.value && el.value.trim()) completados++;
+    };
+    ['nombreReportanteSelect', 'cargoReportante', 'empresaReportante', 'firmaReportante',
+      'fechaHallazgo', 'horaHallazgo', 'areaSector', 'ubicacionExacta', 'descripcionHallazgo',
+      'emailDestino'].forEach(contarSimple);
+
+    ['fueReportadoAntes', 'requiereUrgencia', 'nivelRiesgo', 'detenerTrabajo', 'responsableCondicion'].forEach((nombreGrupo) => {
+      total++;
+      if (obtenerValorRadio(nombreGrupo)) completados++;
+    });
+
+    total++; // Tipo de Riesgo
+    if (obtenerTiposRiesgoSeleccionados().length > 0) completados++;
+
+    total++; // Registro Fotográfico (mínimo 1 foto obligatoria)
+    if (photoData[1] || photoData[2] || photoData[3]) completados++;
+
+    const porcentaje = Math.round((completados / total) * 100);
+    document.getElementById('progressBarFill').style.width = porcentaje + '%';
+    document.getElementById('progressBarLabel').textContent = `${porcentaje}% completado (${completados} de ${total})`;
+  }
+
+
   function enviarCorreoElectronico() {
+    const hayFotos = photoData[1] || photoData[2] || photoData[3];
+    if (!hayFotos) {
+      alert('Debe cargar al menos 1 fotografía del hallazgo antes de enviar el reporte.');
+      document.getElementById('grupoFotos').classList.add('grupo-invalido');
+      document.getElementById('grupoFotos').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!validarFormulario()) {
+      alert('Hay campos obligatorios sin completar. Se marcaron en rojo para que los revise.');
+      return;
+    }
+
     const destino = document.getElementById('emailDestino').value;
     const cc = document.getElementById('emailCC').value;
     const cod = document.getElementById('codigoHallazgo').value;
     const area = document.getElementById('areaSector').value || 'Sector General';
-    const severidad = document.getElementById('potencialSeveridad').value || 'Alerta';
+    const severidad = obtenerValorRadio('nivelRiesgo') || 'Alerta';
 
-    if (!destino) {
-      alert('Por favor, ingrese el correo electrónico del destinatario en la Sección 4.');
-      document.getElementById('emailDestino').focus();
+    if (!cod) {
+      alert('Seleccione el nombre del reportante en la Sección 1 para generar el código de hallazgo.');
+      document.getElementById('nombreReportanteSelect').focus();
       return;
     }
 
+    const descargar = confirm('Recuerde: el correo no adjunta las fotos automáticamente.\n\n¿Descargar las fotos ahora para adjuntarlas manualmente?');
+    if (descargar) descargarTodasLasFotos();
+
     const asunto = `[ALERTA SST] Reporte Condición Subestándar ${cod} - ${area} (${severidad})`;
     const cuerpo = construirCuerpoReporte();
+
+    if (cuerpo.length > LARGO_SEGURO_CORREO) {
+      alert('Este reporte es extenso y podría no abrirse completo en algunos clientes de correo (especialmente Outlook de escritorio).\n\nSi al enviarlo el correo aparece vacío o incompleto, use "👁️ Vista Previa" → "📋 Copiar Texto" y péguelo manualmente.');
+    }
 
     let mailtoUrl = `mailto:${encodeURIComponent(destino)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
     if (cc.trim() !== "") {
       mailtoUrl += `&cc=${encodeURIComponent(cc)}`;
     }
+
+    borrarBorrador();
 
     // Abre el cliente de correo predeterminado del dispositivo (Outlook, Gmail, Thunderbird, Mail de iOS/Android)
     window.location.href = mailtoUrl;
